@@ -9,7 +9,7 @@ and the Iceberg read path has offline tests; S3 write paths are still untested.
 ## Backlog
 
 - P1: Product repos (book-*-data) should add this package as a pinned `[lake]`
-  extra and replace `find_solo_empire_root()`-based `skipUnless` guards with
+  extra and replace parent-checkout-based `skipUnless` guards with
   an import check, so lake tests run standalone.
 - P1: Run `scripts/check_parity.py` in CI once the parent repo can be checked
   out from this repo's workflow (needs a read token; today it is local-only).
@@ -36,11 +36,11 @@ and the Iceberg read path has offline tests; S3 write paths are still untested.
 ## Done in this pass (pass 2)
 
 - Added `scripts/check_parity.py`: AST-level drift check of `src/data_lake`
-  against `$SOLO_EMPIRE_ROOT/infra/scripts/data_lake` (ignores import style,
+  against `$SOLO_DATA_LAKE_ROOT/infra/scripts/data_lake` (ignores import style,
   `sys.path` bootstrap, docstrings; reviewed divergences allow-listed with
   reasons). Parent is in parity today (9 modules).
 - `tests/test_parity_check.py`: synthetic-tree tests for the checker plus a
-  live parent check when `SOLO_EMPIRE_ROOT` is set.
+  live parent check when `SOLO_DATA_LAKE_ROOT` is set.
 - `tests/test_iceberg_read.py`: offline tests for `read_iceberg_rows`
   (config guard, `metadata_location` forwarding, error mapping).
 - CI/README lint `scripts/` too; README documents the parity check.

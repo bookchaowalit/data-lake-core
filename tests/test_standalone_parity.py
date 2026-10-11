@@ -26,7 +26,6 @@ PRODUCT_ADAPTER_SURFACE = (
     "StorageError",
     "bronze_dataset_dir",
     "default_data_lake_uri",
-    "find_solo_empire_root",
     "ingest_to_lake",
     "is_remote_lake_uri",
     "landing_object_bytes",
@@ -55,14 +54,14 @@ SILVER_SURFACE = ("SilverProductContract", "transform_bronze_to_silver", "read_s
 
 
 class NoParentCheckout:
-    """Run with no SOLO_EMPIRE_ROOT and a cwd that has no parent checkout."""
+    """Run with no lake env and a cwd that has no parent checkout."""
 
     def __enter__(self):
         self._tmp = tempfile.TemporaryDirectory()
         self._cwd = os.getcwd()
         self._env = patch.dict(os.environ, {}, clear=False)
         self._env.start()
-        for key in ("SOLO_EMPIRE_ROOT", "SOLO_EMPIRE_DATA_LAKE_URI", "DATA_LAKE_URI"):
+        for key in ("SOLO_EMPIRE_DATA_LAKE_URI", "DATA_LAKE_URI"):
             os.environ.pop(key, None)
         os.chdir(self._tmp.name)
         return Path(self._tmp.name)
@@ -92,7 +91,6 @@ class LandingReplayTests(unittest.TestCase):
         # Regression: this used to call _ensure_data_lake_on_path(None) and
         # raise TypeError whenever no Solo Empire checkout was discoverable.
         with NoParentCheckout() as lake:
-            self.assertIsNone(product_adapter.find_solo_empire_root())
             raw = b'{"id":"btc","price":"1"}'
             result = ingest_payload(
                 raw,

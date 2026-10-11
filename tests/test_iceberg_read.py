@@ -51,7 +51,6 @@ def _runtime(location=None, query=None):
         _IcebergUnavailable,
         _DuckDBUnavailable,
         _StorageError,
-        None,
     )
     return runtime, calls
 

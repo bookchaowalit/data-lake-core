@@ -54,22 +54,22 @@ python -m compileall -q src
 
 `tests/test_standalone_parity.py` pins the module surface that the
 `book-*-data` product repositories import (`product_adapter`,
-`product_store`, `silver`, `storage`) and runs it with no parent Solo Empire
+`product_store`, `silver`, `storage`) and runs it with no solo-data-lake
 checkout on disk.
 
-### Parity with the parent monorepo
+### Parity with the solo-data-lake repository
 
-The modules in `src/data_lake` are a portable copy of the parent Solo Empire
+The modules in `src/data_lake` are a portable copy of the `solo-data-lake`
 `infra/scripts/data_lake` modules. Check for drift with:
 
 ```bash
-SOLO_EMPIRE_ROOT=/path/to/solo-empire python scripts/check_parity.py
+SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake python scripts/check_parity.py
 ```
 
 The check compares module ASTs, ignoring import style, `sys.path` bootstrap,
 and docstrings; reviewed divergences are listed in `ALLOWED_DIVERGENCE` in the
 script. Exit code 1 means drift, 2 means no parent checkout was found. With
-`SOLO_EMPIRE_ROOT` set, `tests/test_parity_check.py` also runs the live check.
+`SOLO_DATA_LAKE_ROOT` set, `tests/test_parity_check.py` also runs the live check.
 
 ### Source ownership and updates
 
@@ -90,8 +90,8 @@ Use this reviewed update procedure:
 3. From this package checkout, run the existing drift and standalone checks:
 
    ```bash
-   python scripts/check_parity.py --parent /path/to/solo-empire
-   SOLO_EMPIRE_ROOT=/path/to/solo-empire PYTHONPATH=src \
+   python scripts/check_parity.py --parent /path/to/solo-data-lake
+   SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake PYTHONPATH=src \
      python -m unittest discover -s tests -v
    ruff check src tests scripts
    python -m compileall -q src

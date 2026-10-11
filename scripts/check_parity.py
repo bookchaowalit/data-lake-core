@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Detect drift between this packaged runtime and the parent Solo Empire copy.
+"""Detect drift between this packaged runtime and the solo-data-lake runtime copy.
 
 The packaged ``src/data_lake`` modules are a portable copy of the parent
-monorepo's ``infra/scripts/data_lake`` modules. They intentionally differ in
+``solo-data-lake`` repository's ``infra/scripts/data_lake`` modules. They intentionally differ in
 import style (relative imports, no ``sys.path`` bootstrap) and in the few
 runtime loaders that must work without a parent checkout. Everything else
 should stay identical, so this script compares module ASTs after stripping:
@@ -17,8 +17,8 @@ Known, reviewed divergences are listed in ``ALLOWED_DIVERGENCE`` with a reason.
 
 Usage::
 
-    SOLO_EMPIRE_ROOT=/path/to/solo-empire python scripts/check_parity.py
-    python scripts/check_parity.py --parent /path/to/solo-empire
+    SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake python scripts/check_parity.py
+    python scripts/check_parity.py --parent /path/to/solo-data-lake
 
 Exit codes: 0 in parity, 1 drift found, 2 parent checkout unavailable
 (use ``--allow-missing`` to turn that into 0 for optional CI jobs).
@@ -141,7 +141,7 @@ def compare_module(name: str, packaged: str, parent: str) -> list[str]:
 
 
 def find_parent(explicit: str | None) -> Path | None:
-    candidate = explicit or os.environ.get("SOLO_EMPIRE_ROOT", "")
+    candidate = explicit or os.environ.get("SOLO_DATA_LAKE_ROOT", "")
     if not candidate:
         return None
     parent = Path(candidate).expanduser().resolve() / PARENT_SUBDIR
@@ -168,7 +168,7 @@ def check(package_dir: Path, parent_dir: Path) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--parent", help="Solo Empire checkout (default: $SOLO_EMPIRE_ROOT)")
+    parser.add_argument("--parent", help="solo-data-lake checkout (default: $SOLO_DATA_LAKE_ROOT)")
     parser.add_argument(
         "--allow-missing",
         action="store_true",
@@ -178,7 +178,7 @@ def main(argv: list[str] | None = None) -> int:
     parent_dir = find_parent(args.parent)
     if parent_dir is None:
         print(
-            f"parity: parent checkout not found (set SOLO_EMPIRE_ROOT or --parent; "
+            f"parity: parent checkout not found (set SOLO_DATA_LAKE_ROOT or --parent; "
             f"expected <root>/{PARENT_SUBDIR.as_posix()})",
             file=sys.stderr,
         )

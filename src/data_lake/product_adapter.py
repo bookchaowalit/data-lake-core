@@ -24,7 +24,7 @@ from .storage import ObjectNotFound, ObjectStore, StorageError
 
 
 class LakeUnavailable(RuntimeError):
-    """Raised when the Solo Empire data-lake runtime cannot be loaded."""
+    """Raised when the data-lake runtime cannot be loaded."""
 
 
 class LakeIngestError(RuntimeError):
@@ -43,7 +43,6 @@ class LakeProductContract:
     bronze_schema_version: str = "1"
     project_root: Optional[Path] = None
     data_lake_uri: str = ""
-    solo_empire_root: str = ""
     lineage_filename: str = "lake_lineage.json"
     datasets: tuple[str, ...] = field(default_factory=tuple)
 
@@ -52,29 +51,10 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def find_solo_empire_root(
-    start: Optional[Path] = None,
-    *,
-    solo_empire_root: str = "",
-) -> Optional[Path]:
-    env = (solo_empire_root or os.environ.get("SOLO_EMPIRE_ROOT") or "").strip()
-    if env:
-        candidate = Path(env).expanduser().resolve()
-        if (candidate / "infra" / "scripts" / "data_lake" / "ingest.py").is_file():
-            return candidate
-
-    cur = (start or Path.cwd()).resolve()
-    for parent in [cur, *cur.parents]:
-        if (parent / "infra" / "scripts" / "data_lake" / "ingest.py").is_file():
-            return parent
-    return None
-
-
 def default_data_lake_uri(
     *,
     data_lake_uri: str = "",
     project_root: Optional[Path] = None,
-    solo_empire_root: str = "",
 ) -> str:
     explicit = (
         data_lake_uri
@@ -84,16 +64,11 @@ def default_data_lake_uri(
     ).strip()
     if explicit:
         return explicit
-    root = find_solo_empire_root(
-        project_root, solo_empire_root=solo_empire_root
-    )
-    if root is not None:
-        return str((root / "data" / "lake").resolve())
     base = project_root or Path.cwd()
     return str((base / "data" / "lake").resolve())
 
 
-def load_ingest_runtime(start: Optional[Path] = None, *, solo_empire_root: str = ""):
+def load_ingest_runtime(start: Optional[Path] = None):
     try:
         from .ingest import ingest_payload
         from .parquet import ParquetUnavailable
@@ -103,24 +78,20 @@ def load_ingest_runtime(start: Optional[Path] = None, *, solo_empire_root: str =
             "data_lake package is not importable. Install the Bronze/Parquet "
             "dependencies (at least pyarrow)."
         ) from exc
-    runtime_root = find_solo_empire_root(start, solo_empire_root=solo_empire_root)
-    return ingest_payload, ParquetUnavailable, StorageError, runtime_root
+    return ingest_payload, ParquetUnavailable, StorageError
 
 
-def load_query_runtime(start: Optional[Path] = None, *, solo_empire_root: str = ""):
+def load_query_runtime(start: Optional[Path] = None):
     try:
         from .query import DuckDBUnavailable, query_parquet
     except ImportError as exc:
         raise LakeUnavailable(
             "data_lake.query is not importable. Install DuckDB for Parquet reads."
         ) from exc
-    runtime_root = find_solo_empire_root(start, solo_empire_root=solo_empire_root)
-    return query_parquet, DuckDBUnavailable, runtime_root
+    return query_parquet, DuckDBUnavailable
 
 
-def load_iceberg_query_runtime(
-    start: Optional[Path] = None, *, solo_empire_root: str = ""
-):
+def load_iceberg_query_runtime(start: Optional[Path] = None):
     try:
         from .iceberg import IcebergUnavailable, iceberg_table_location
         from .query import DuckDBUnavailable, query_iceberg
@@ -130,14 +101,12 @@ def load_iceberg_query_runtime(
             "Iceberg query runtime is not importable. Install the optional "
             "PyIceberg dependencies."
         ) from exc
-    runtime_root = find_solo_empire_root(start, solo_empire_root=solo_empire_root)
     return (
         iceberg_table_location,
         query_iceberg,
         IcebergUnavailable,
         DuckDBUnavailable,
         StorageError,
-        runtime_root,
     )
 
 
@@ -178,7 +147,6 @@ def remote_bronze_dataset_glob(
     uri = data_lake_uri or default_data_lake_uri(
         data_lake_uri=contract.data_lake_uri,
         project_root=contract.project_root,
-        solo_empire_root=contract.solo_empire_root,
     ).strip()
     if not is_remote_lake_uri(uri):
         raise LakeUnavailable("remote_bronze_dataset_glob requires an s3:// lake URI")
@@ -198,7 +166,6 @@ def bronze_dataset_dir(
     uri = data_lake_uri or default_data_lake_uri(
         data_lake_uri=contract.data_lake_uri,
         project_root=contract.project_root,
-        solo_empire_root=contract.solo_empire_root,
     )
     root = resolve_lake_root(uri)
     return (
@@ -301,14 +268,12 @@ def ingest_to_lake(
     if not records:
         raise LakeIngestError("Refusing lake ingest with zero records")
 
-    ingest_payload, ParquetUnavailable, StorageError, solo_root = load_ingest_runtime(
+    ingest_payload, ParquetUnavailable, StorageError = load_ingest_runtime(
         contract.project_root,
-        solo_empire_root=contract.solo_empire_root,
     )
     uri = data_lake_uri or default_data_lake_uri(
         data_lake_uri=contract.data_lake_uri,
         project_root=contract.project_root,
-        solo_empire_root=contract.solo_empire_root,
     )
     meta = {
         "adapter": contract.source,
@@ -405,7 +370,6 @@ def read_bronze_rows(
     uri = data_lake_uri or default_data_lake_uri(
         data_lake_uri=contract.data_lake_uri,
         project_root=contract.project_root,
-        solo_empire_root=contract.solo_empire_root,
     )
     remote = is_remote_lake_uri(uri)
     committed_keys = (
@@ -432,9 +396,8 @@ def read_bronze_rows(
             return []
         paths = [str(path) for path in files]
 
-    query_parquet, DuckDBUnavailable, _solo = load_query_runtime(
+    query_parquet, DuckDBUnavailable = load_query_runtime(
         contract.project_root,
-        solo_empire_root=contract.solo_empire_root,
     )
     statement = sql or (
         "SELECT event_id, source, source_record_id, domain, dataset, "
@@ -481,10 +444,8 @@ def read_iceberg_rows(
         IcebergUnavailable,
         DuckDBUnavailable,
         StorageError,
-        _solo,
     ) = load_iceberg_query_runtime(
         contract.project_root,
-        solo_empire_root=contract.solo_empire_root,
     )
     statement = sql or (
         "SELECT event_id, source, source_record_id, domain, dataset, "

@@ -1,6 +1,6 @@
 """Tests for scripts/check_parity.py (offline; synthetic parent trees).
 
-When ``SOLO_EMPIRE_ROOT`` points at a real Solo Empire checkout, the live
+When ``SOLO_DATA_LAKE_ROOT`` points at a real solo-data-lake checkout, the live
 parity test also runs against the parent ``infra/scripts/data_lake``.
 """
 
@@ -116,12 +116,12 @@ class CliTests(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    os.environ.get("SOLO_EMPIRE_ROOT"), "set SOLO_EMPIRE_ROOT to check live parity"
+    os.environ.get("SOLO_DATA_LAKE_ROOT"), "set SOLO_DATA_LAKE_ROOT to check live parity"
 )
 class LiveParentParityTests(unittest.TestCase):
     def test_packaged_runtime_matches_parent(self):
         parent_dir = check_parity.find_parent(None)
-        self.assertIsNotNone(parent_dir, "SOLO_EMPIRE_ROOT has no infra/scripts/data_lake")
+        self.assertIsNotNone(parent_dir, "SOLO_DATA_LAKE_ROOT has no infra/scripts/data_lake")
         self.assertEqual(check_parity.check(check_parity.PACKAGE_DIR, parent_dir), [])
 
 
