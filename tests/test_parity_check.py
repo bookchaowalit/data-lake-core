@@ -1,6 +1,6 @@
 """Tests for scripts/check_parity.py (offline; synthetic parent trees).
 
-When ``SOLO_DATA_LAKE_ROOT`` points at a real solo-data-lake checkout, the live
+When ``SOLO_DATA_LAKE_ROOT`` points at a real data-lake checkout, the live
 parity test also runs against the parent ``infra/scripts/data_lake``.
 """
 

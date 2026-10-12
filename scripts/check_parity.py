@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Detect drift between this packaged runtime and the solo-data-lake runtime copy.
+"""Detect drift between this packaged runtime and the data-lake runtime copy.
 
 The packaged ``src/data_lake`` modules are a portable copy of the parent
-``solo-data-lake`` repository's ``infra/scripts/data_lake`` modules. They intentionally differ in
+``data-lake`` repository's ``infra/scripts/data_lake`` modules. They intentionally differ in
 import style (relative imports, no ``sys.path`` bootstrap) and in the few
 runtime loaders that must work without a parent checkout. Everything else
 should stay identical, so this script compares module ASTs after stripping:
@@ -168,7 +168,7 @@ def check(package_dir: Path, parent_dir: Path) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--parent", help="solo-data-lake checkout (default: $SOLO_DATA_LAKE_ROOT)")
+    parser.add_argument("--parent", help="data-lake checkout (default: $SOLO_DATA_LAKE_ROOT)")
     parser.add_argument(
         "--allow-missing",
         action="store_true",

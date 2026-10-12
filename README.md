@@ -1,4 +1,4 @@
-# solo-empire-data-lake
+# data-lake-core
 
 Public shared runtime for Solo Empire's lake-first data products.
 
@@ -25,7 +25,7 @@ unpinned branch in production:
 
 ```bash
 python -m pip install \
-  "solo-empire-data-lake[lake] @ https://github.com/bookchaowalit/solo-empire-data-lake/archive/<commit>.tar.gz"
+  "solo-empire-data-lake[lake] @ https://github.com/bookchaowalit/data-lake-core/archive/<commit>.tar.gz"
 ```
 
 `[bronze]` installs PyArrow for landing/Bronze writes. `[query]` installs
@@ -54,12 +54,12 @@ python -m compileall -q src
 
 `tests/test_standalone_parity.py` pins the module surface that the
 `book-*-data` product repositories import (`product_adapter`,
-`product_store`, `silver`, `storage`) and runs it with no solo-data-lake
+`product_store`, `silver`, `storage`) and runs it with no data-lake
 checkout on disk.
 
-### Parity with the solo-data-lake repository
+### Parity with the data-lake repository
 
-The modules in `src/data_lake` are a portable copy of the `solo-data-lake`
+The modules in `src/data_lake` are a portable copy of the `data-lake`
 `infra/scripts/data_lake` modules. Check for drift with:
 
 ```bash
