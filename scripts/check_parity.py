@@ -17,8 +17,8 @@ Known, reviewed divergences are listed in ``ALLOWED_DIVERGENCE`` with a reason.
 
 Usage::
 
-    SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake python scripts/check_parity.py
-    python scripts/check_parity.py --parent /path/to/solo-data-lake
+    SOLO_DATA_LAKE_ROOT=/path/to/data-lake python scripts/check_parity.py
+    python scripts/check_parity.py --parent /path/to/data-lake
 
 Exit codes: 0 in parity, 1 drift found, 2 parent checkout unavailable
 (use ``--allow-missing`` to turn that into 0 for optional CI jobs).

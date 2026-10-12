@@ -63,7 +63,7 @@ The modules in `src/data_lake` are a portable copy of the `data-lake`
 `infra/scripts/data_lake` modules. Check for drift with:
 
 ```bash
-SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake python scripts/check_parity.py
+SOLO_DATA_LAKE_ROOT=/path/to/data-lake python scripts/check_parity.py
 ```
 
 The check compares module ASTs, ignoring import style, `sys.path` bootstrap,
@@ -90,8 +90,8 @@ Use this reviewed update procedure:
 3. From this package checkout, run the existing drift and standalone checks:
 
    ```bash
-   python scripts/check_parity.py --parent /path/to/solo-data-lake
-   SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake PYTHONPATH=src \
+   python scripts/check_parity.py --parent /path/to/data-lake
+   SOLO_DATA_LAKE_ROOT=/path/to/data-lake PYTHONPATH=src \
      python -m unittest discover -s tests -v
    ruff check src tests scripts
    python -m compileall -q src
