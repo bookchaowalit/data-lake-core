@@ -85,6 +85,7 @@ class CompareModuleTests(unittest.TestCase):
             ["m: module-level statements differ"],
         )
 
+    @patch.dict(check_parity.REVIEWED_BOUNDARY_PAIRS, {}, clear=True)
     def test_allowlisted_divergence_is_ignored(self):
         packaged = "def load_query_runtime():\n    return 1\n"
         parent = "def load_query_runtime():\n    return 2\n"
@@ -150,6 +151,50 @@ class ModuleSetTests(unittest.TestCase):
 
 
 class ReviewedBoundaryTests(unittest.TestCase):
+    def test_removing_pinned_parent_only_definition_is_drift(self):
+        reviewed = (
+            None,
+            "4cfebd287bbf2c7f3451375cfa6b486699aa4946890fa42463969634ef95e7ce",
+            "Parent-only fixture discovery.",
+        )
+        with patch.dict(
+            check_parity.REVIEWED_BOUNDARY_PAIRS, {("fixture", "boundary"): reviewed}
+        ):
+            self.assertEqual(
+                check_parity.compare_module(
+                    "fixture", "", "def boundary():\n    return 2\n"
+                ),
+                [],
+            )
+            self.assertEqual(
+                check_parity.compare_module("fixture", "", ""),
+                [
+                    "fixture.boundary: reviewed boundary definition missing from both runtimes"
+                ],
+            )
+
+    def test_removing_pinned_package_only_definition_is_drift(self):
+        reviewed = (
+            "18618edc69a87a41df05bdd6e851a9622215e71ef1b60c1f5ce8ec2ddba4bad3",
+            None,
+            "Package-only fixture discovery.",
+        )
+        with patch.dict(
+            check_parity.REVIEWED_BOUNDARY_PAIRS, {("fixture", "boundary"): reviewed}
+        ):
+            self.assertEqual(
+                check_parity.compare_module(
+                    "fixture", "def boundary():\n    return 1\n", ""
+                ),
+                [],
+            )
+            self.assertEqual(
+                check_parity.compare_module("fixture", "", ""),
+                [
+                    "fixture.boundary: reviewed boundary definition missing from both runtimes"
+                ],
+            )
+
     def test_exact_reviewed_pair_does_not_allow_future_changes_on_either_side(self):
         packaged = "def boundary():\n    return 1\n"
         parent = "def boundary():\n    return 2\n"
@@ -182,6 +227,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(check_parity.main(["--parent", tmp]), 2)
             self.assertEqual(check_parity.main(["--parent", tmp, "--allow-missing"]), 0)
 
+    @patch.dict(check_parity.REVIEWED_BOUNDARY_PAIRS, {}, clear=True)
     def test_parent_copy_of_package_is_in_parity_and_drift_is_reported(self):
         with tempfile.TemporaryDirectory() as tmp:
             parent_dir = Path(tmp) / "infra" / "scripts" / "data_lake"

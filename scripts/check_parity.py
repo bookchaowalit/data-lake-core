@@ -231,7 +231,10 @@ def compare_module(name: str, packaged: str, parent: str) -> list[str]:
     pkg_defs, pkg_other = _normalize(packaged)
     par_defs, par_other = _normalize(parent)
     findings: list[str] = []
-    for def_name in sorted(set(pkg_defs) | set(par_defs)):
+    reviewed_names = {
+        definition for module, definition in REVIEWED_BOUNDARY_PAIRS if module == name
+    }
+    for def_name in sorted(set(pkg_defs) | set(par_defs) | reviewed_names):
         key = (name, def_name)
         if key in ALLOWED_DIVERGENCE:
             continue
@@ -246,7 +249,11 @@ def compare_module(name: str, packaged: str, parent: str) -> list[str]:
             == reviewed[:2]
         ):
             continue
-        if def_name not in par_defs:
+        if def_name not in pkg_defs and def_name not in par_defs:
+            findings.append(
+                f"{name}.{def_name}: reviewed boundary definition missing from both runtimes"
+            )
+        elif def_name not in par_defs:
             findings.append(f"{name}.{def_name}: only in packaged runtime")
         elif def_name not in pkg_defs:
             findings.append(f"{name}.{def_name}: only in parent (missing from package)")
