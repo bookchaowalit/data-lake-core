@@ -57,18 +57,25 @@ python -m compileall -q src
 `product_store`, `silver`, `storage`) and runs it with no data-lake
 checkout on disk.
 
-### Parity with the data-lake repository
+### Parity with the data-lake-pipelines repository
 
-The modules in `src/data_lake` are a portable copy of the `data-lake`
+The modules in `src/data_lake` are a portable copy of `data-lake-pipelines`
 `infra/scripts/data_lake` modules. Check for drift with:
 
 ```bash
-SOLO_DATA_LAKE_ROOT=/path/to/data-lake python scripts/check_parity.py
+SOLO_DATA_LAKE_ROOT=/path/to/data-lake-pipelines python scripts/check_parity.py
 ```
 
 The check compares module ASTs, ignoring import style, `sys.path` bootstrap,
-and docstrings; reviewed divergences are listed in `ALLOWED_DIVERGENCE` in the
-script. Exit code 1 means drift, 2 means no parent checkout was found. With
+and docstrings. It compares both module sets: unexplained parent additions,
+package additions, or deletions fail. The 28 parent-only operator/streaming
+modules are individually named with reasons in `ALLOWED_PARENT_ONLY`; their
+contents are outside the packaged runtime. If one becomes packaged, its
+exception must be removed after review. Existing standalone loader boundaries
+remain in `ALLOWED_DIVERGENCE`. Five additional reviewed adapter differences
+use exact pairs of normalized AST hashes in `REVIEWED_BOUNDARY_PAIRS`, so a
+future change on either side fails rather than inheriting an exception.
+Exit code 1 means drift, 2 means no parent checkout was found. With
 `SOLO_DATA_LAKE_ROOT` set, `tests/test_parity_check.py` also runs the live check.
 
 ### Source ownership and updates
@@ -78,7 +85,8 @@ For the nine shared modules currently in `src/data_lake` (including
 for shared algorithms and contracts. This repository owns the installable
 runtime, packaging, standalone tests, relative imports and the reviewed
 standalone adapters in `ALLOWED_DIVERGENCE`. Parent-only orchestration and
-pipeline modules are outside the package and this parity check's coverage.
+pipeline module contents are outside the package; their names remain checked
+against the explicit parent-only list.
 
 Use this reviewed update procedure:
 
@@ -90,8 +98,8 @@ Use this reviewed update procedure:
 3. From this package checkout, run the existing drift and standalone checks:
 
    ```bash
-   python scripts/check_parity.py --parent /path/to/data-lake
-   SOLO_DATA_LAKE_ROOT=/path/to/data-lake PYTHONPATH=src \
+   python scripts/check_parity.py --parent /path/to/data-lake-pipelines
+   SOLO_DATA_LAKE_ROOT=/path/to/data-lake-pipelines PYTHONPATH=src \
      python -m unittest discover -s tests -v
    ruff check src tests scripts
    python -m compileall -q src

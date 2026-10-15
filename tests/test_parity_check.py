@@ -12,6 +12,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "check_parity.py"
@@ -96,6 +97,85 @@ class CompareModuleTests(unittest.TestCase):
         )
 
 
+class ModuleSetTests(unittest.TestCase):
+    def _trees(self, root):
+        package = Path(root) / "package"
+        parent = Path(root) / "parent"
+        package.mkdir()
+        parent.mkdir()
+        source = "def shared():\n    return 1\n"
+        (package / "shared.py").write_text(source)
+        (parent / "shared.py").write_text(source)
+        return package, parent
+
+    def test_unreviewed_parent_module_addition_is_drift(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            package, parent = self._trees(tmp)
+            (parent / "unexpected.py").write_text("VALUE = 1\n")
+            findings = check_parity.check(package, parent)
+            self.assertTrue(
+                any("unexpected" in finding for finding in findings), findings
+            )
+
+    def test_package_module_deletion_is_drift(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            package, parent = self._trees(tmp)
+            (package / "shared.py").unlink()
+            findings = check_parity.check(package, parent)
+            self.assertTrue(any("shared" in finding for finding in findings), findings)
+
+    def test_package_module_addition_is_drift(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            package, parent = self._trees(tmp)
+            (package / "unexpected.py").write_text("VALUE = 1\n")
+            findings = check_parity.check(package, parent)
+            self.assertTrue(
+                any("unexpected" in finding for finding in findings), findings
+            )
+
+    def test_parent_only_exception_requires_reason_and_cannot_hide_new_package_module(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            package, parent = self._trees(tmp)
+            (parent / "operator.py").write_text("VALUE = 1\n")
+            with patch.dict(check_parity.ALLOWED_PARENT_ONLY, {"operator": ""}):
+                self.assertTrue(check_parity.check(package, parent))
+            with patch.dict(
+                check_parity.ALLOWED_PARENT_ONLY, {"operator": "Operator-only fixture."}
+            ):
+                self.assertEqual(check_parity.check(package, parent), [])
+                (package / "operator.py").write_text("VALUE = 1\n")
+                self.assertEqual(len(check_parity.check(package, parent)), 1)
+
+
+class ReviewedBoundaryTests(unittest.TestCase):
+    def test_exact_reviewed_pair_does_not_allow_future_changes_on_either_side(self):
+        packaged = "def boundary():\n    return 1\n"
+        parent = "def boundary():\n    return 2\n"
+        reviewed = (
+            "18618edc69a87a41df05bdd6e851a9622215e71ef1b60c1f5ce8ec2ddba4bad3",
+            "4cfebd287bbf2c7f3451375cfa6b486699aa4946890fa42463969634ef95e7ce",
+            "Standalone fixture boundary.",
+        )
+        with patch.dict(
+            check_parity.REVIEWED_BOUNDARY_PAIRS, {("fixture", "boundary"): reviewed}
+        ):
+            self.assertEqual(
+                check_parity.compare_module("fixture", packaged, parent), []
+            )
+            for changed_package, changed_parent in (
+                (packaged.replace("return 1", "return 3"), parent),
+                (packaged, parent.replace("return 2", "return 3")),
+            ):
+                self.assertEqual(
+                    check_parity.compare_module(
+                        "fixture", changed_package, changed_parent
+                    ),
+                    ["fixture.boundary: implementation differs"],
+                )
+
+
 class CliTests(unittest.TestCase):
     def test_missing_parent_exit_codes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -109,19 +189,23 @@ class CliTests(unittest.TestCase):
             self.assertEqual(check_parity.main(["--parent", tmp]), 0)
             storage = parent_dir / "storage.py"
             storage.write_text(
-                storage.read_text(encoding="utf-8") + "\n\ndef extra():\n    return 1\n",
+                storage.read_text(encoding="utf-8")
+                + "\n\ndef extra():\n    return 1\n",
                 encoding="utf-8",
             )
             self.assertEqual(check_parity.main(["--parent", tmp]), 1)
 
 
 @unittest.skipUnless(
-    os.environ.get("SOLO_DATA_LAKE_ROOT"), "set SOLO_DATA_LAKE_ROOT to check live parity"
+    os.environ.get("SOLO_DATA_LAKE_ROOT"),
+    "set SOLO_DATA_LAKE_ROOT to check live parity",
 )
 class LiveParentParityTests(unittest.TestCase):
     def test_packaged_runtime_matches_parent(self):
         parent_dir = check_parity.find_parent(None)
-        self.assertIsNotNone(parent_dir, "SOLO_DATA_LAKE_ROOT has no infra/scripts/data_lake")
+        self.assertIsNotNone(
+            parent_dir, "SOLO_DATA_LAKE_ROOT has no infra/scripts/data_lake"
+        )
         self.assertEqual(check_parity.check(check_parity.PACKAGE_DIR, parent_dir), [])
 
 
