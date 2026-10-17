@@ -50,7 +50,11 @@ PRODUCT_STORE_SURFACE = (
     "read_iceberg_rows",
     "storage_model_for_source_kind",
 )
-SILVER_SURFACE = ("SilverProductContract", "transform_bronze_to_silver", "read_silver_rows")
+SILVER_SURFACE = (
+    "SilverProductContract",
+    "transform_bronze_to_silver",
+    "read_silver_rows",
+)
 
 
 class NoParentCheckout:
@@ -160,13 +164,19 @@ class SilverNormalizerTests(unittest.TestCase):
 
     def test_crypto_ohlcv_rejects_non_finite_and_unbounded_bars(self):
         bad = dict(self.OHLCV, high="nan")
-        _, errors = silver.normalize_crypto_ohlcv_row(_bronze_row(bad), silver_run_id="r")
+        _, errors = silver.normalize_crypto_ohlcv_row(
+            _bronze_row(bad), silver_run_id="r"
+        )
         self.assertIn("high must be finite", errors)
         bad = dict(self.OHLCV, high="10.5")
-        _, errors = silver.normalize_crypto_ohlcv_row(_bronze_row(bad), silver_run_id="r")
+        _, errors = silver.normalize_crypto_ohlcv_row(
+            _bronze_row(bad), silver_run_id="r"
+        )
         self.assertIn("high/low do not bound open/close", errors)
         bad = dict(self.OHLCV, close_time_ms=1000)
-        _, errors = silver.normalize_crypto_ohlcv_row(_bronze_row(bad), silver_run_id="r")
+        _, errors = silver.normalize_crypto_ohlcv_row(
+            _bronze_row(bad), silver_run_id="r"
+        )
         self.assertIn("close_time_ms must be after open_time_ms", errors)
 
     def test_crypto_funding_row(self):
@@ -190,7 +200,9 @@ class SilverNormalizerTests(unittest.TestCase):
 
     def test_price_normalizers_reject_nan(self):
         _, errors = silver.normalize_crypto_row(
-            _bronze_row({"id": "btc", "coin_id": "btc", "currency": "usd", "price": "NaN"}),
+            _bronze_row(
+                {"id": "btc", "coin_id": "btc", "currency": "usd", "price": "NaN"}
+            ),
             silver_run_id="r",
         )
         self.assertIn("price must be finite", errors)

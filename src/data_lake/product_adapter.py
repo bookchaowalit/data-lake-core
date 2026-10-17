@@ -48,7 +48,12 @@ class LakeProductContract:
 
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def default_data_lake_uri(
@@ -144,10 +149,13 @@ def remote_bronze_dataset_glob(
     ``source``. Restricting the glob to those known partition levels avoids
     scanning landing, manifests, or another dataset.
     """
-    uri = data_lake_uri or default_data_lake_uri(
-        data_lake_uri=contract.data_lake_uri,
-        project_root=contract.project_root,
-    ).strip()
+    uri = (
+        data_lake_uri
+        or default_data_lake_uri(
+            data_lake_uri=contract.data_lake_uri,
+            project_root=contract.project_root,
+        ).strip()
+    )
     if not is_remote_lake_uri(uri):
         raise LakeUnavailable("remote_bronze_dataset_glob requires an s3:// lake URI")
     return (
@@ -216,7 +224,9 @@ def _committed_bronze_keys(
         try:
             manifest_keys.extend(store.list_keys(manifest_prefix))
         except StorageError as exc:
-            raise LakeIngestError(f"Cannot list Bronze commit manifests for {dataset}") from exc
+            raise LakeIngestError(
+                f"Cannot list Bronze commit manifests for {dataset}"
+            ) from exc
     for manifest_key in manifest_keys:
         if not manifest_key.endswith(".json"):
             continue
@@ -228,7 +238,9 @@ def _committed_bronze_keys(
             # commit; simply leave this batch out of the read set.
             continue
         except (StorageError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise LakeIngestError(f"Invalid Bronze commit manifest for {dataset}") from exc
+            raise LakeIngestError(
+                f"Invalid Bronze commit manifest for {dataset}"
+            ) from exc
         if not isinstance(manifest, dict):
             raise LakeIngestError(f"Invalid Bronze commit manifest shape for {dataset}")
         for identity_field, expected in {
@@ -247,7 +259,11 @@ def _committed_bronze_keys(
             continue
         bronze = manifest.get("bronze")
         key = bronze.get("key") if isinstance(bronze, dict) else None
-        if isinstance(key, str) and key.startswith(expected_prefix) and key.endswith(".parquet"):
+        if (
+            isinstance(key, str)
+            and key.startswith(expected_prefix)
+            and key.endswith(".parquet")
+        ):
             committed.add(key)
     return committed
 
@@ -327,7 +343,9 @@ def write_lineage(
         except (json.JSONDecodeError, OSError):
             previous = {}
 
-    datasets = previous.get("datasets") if isinstance(previous.get("datasets"), dict) else {}
+    datasets = (
+        previous.get("datasets") if isinstance(previous.get("datasets"), dict) else {}
+    )
     datasets[dataset] = {
         "run_id": result.get("run_id"),
         "record_count": result.get("record_count"),
@@ -345,11 +363,15 @@ def write_lineage(
         "updated_at": utc_now_iso(),
         "datasets": datasets,
     }
-    path.write_text(json.dumps(body, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(body, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     return path
 
 
-def load_lineage(data_dir: Path, *, filename: str = "lake_lineage.json") -> Optional[dict[str, Any]]:
+def load_lineage(
+    data_dir: Path, *, filename: str = "lake_lineage.json"
+) -> Optional[dict[str, Any]]:
     path = Path(data_dir) / filename
     if not path.exists():
         return None
@@ -389,7 +411,8 @@ def read_bronze_rows(
         if committed_keys is not None:
             lake_root = resolve_lake_root(uri)
             files = [
-                path for path in files
+                path
+                for path in files
                 if path.relative_to(lake_root).as_posix() in committed_keys
             ]
         if not files:
@@ -412,7 +435,9 @@ def read_bronze_rows(
     except DuckDBUnavailable as exc:
         raise LakeUnavailable(str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
-        raise LakeIngestError(f"Bronze DuckDB query failed for {dataset}: {exc}") from exc
+        raise LakeIngestError(
+            f"Bronze DuckDB query failed for {dataset}: {exc}"
+        ) from exc
 
 
 def read_iceberg_rows(

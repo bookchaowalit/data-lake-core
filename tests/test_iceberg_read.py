@@ -7,7 +7,11 @@ import unittest
 from unittest.mock import patch
 
 from data_lake import product_adapter
-from data_lake.product_adapter import LakeIngestError, LakeProductContract, LakeUnavailable
+from data_lake.product_adapter import (
+    LakeIngestError,
+    LakeProductContract,
+    LakeUnavailable,
+)
 
 CONTRACT = LakeProductContract(
     source="book-crypto-data", domain="market", product_schema_version="1"
@@ -71,8 +75,11 @@ class ReadIcebergRowsTests(unittest.TestCase):
             },
             query=[{"event_id": "e1"}],
         )
-        with patch.dict(os.environ, ENV), patch.object(
-            product_adapter, "load_iceberg_query_runtime", return_value=runtime
+        with (
+            patch.dict(os.environ, ENV),
+            patch.object(
+                product_adapter, "load_iceberg_query_runtime", return_value=runtime
+            ),
         ):
             rows = product_adapter.read_iceberg_rows(CONTRACT, "crypto_prices")
         self.assertEqual(rows, [{"event_id": "e1"}])
@@ -90,28 +97,40 @@ class ReadIcebergRowsTests(unittest.TestCase):
         self.assertIn("FROM lake_table", sql)
         self.assertEqual(
             kwargs,
-            {"metadata_location": "s3://warehouse-bucket/uuid/table/metadata/00007.json"},
+            {
+                "metadata_location": "s3://warehouse-bucket/uuid/table/metadata/00007.json"
+            },
         )
 
     def test_missing_metadata_location_passes_none_and_custom_sql(self):
-        runtime, calls = _runtime(
-            location={"table_location": "s3://b/t"}, query=[]
-        )
-        with patch.dict(os.environ, ENV), patch.object(
-            product_adapter, "load_iceberg_query_runtime", return_value=runtime
+        runtime, calls = _runtime(location={"table_location": "s3://b/t"}, query=[])
+        with (
+            patch.dict(os.environ, ENV),
+            patch.object(
+                product_adapter, "load_iceberg_query_runtime", return_value=runtime
+            ),
         ):
             product_adapter.read_iceberg_rows(
                 CONTRACT, "crypto_prices", sql="SELECT 1 FROM lake_table"
             )
         self.assertEqual(
-            calls["query"], ("s3://b/t", "SELECT 1 FROM lake_table", {"metadata_location": None})
+            calls["query"],
+            ("s3://b/t", "SELECT 1 FROM lake_table", {"metadata_location": None}),
         )
 
     def test_runtime_errors_map_to_lake_unavailable(self):
-        for exc in (_IcebergUnavailable("x"), _DuckDBUnavailable("y"), _StorageError("z")):
+        for exc in (
+            _IcebergUnavailable("x"),
+            _DuckDBUnavailable("y"),
+            _StorageError("z"),
+        ):
             runtime, _ = _runtime(location=exc)
-            with self.subTest(exc=type(exc).__name__), patch.dict(os.environ, ENV), patch.object(
-                product_adapter, "load_iceberg_query_runtime", return_value=runtime
+            with (
+                self.subTest(exc=type(exc).__name__),
+                patch.dict(os.environ, ENV),
+                patch.object(
+                    product_adapter, "load_iceberg_query_runtime", return_value=runtime
+                ),
             ):
                 with self.assertRaises(LakeUnavailable):
                     product_adapter.read_iceberg_rows(CONTRACT, "crypto_prices")
@@ -120,8 +139,11 @@ class ReadIcebergRowsTests(unittest.TestCase):
         runtime, _ = _runtime(
             location={"table_location": "s3://b/t"}, query=ValueError("bad sql")
         )
-        with patch.dict(os.environ, ENV), patch.object(
-            product_adapter, "load_iceberg_query_runtime", return_value=runtime
+        with (
+            patch.dict(os.environ, ENV),
+            patch.object(
+                product_adapter, "load_iceberg_query_runtime", return_value=runtime
+            ),
         ):
             with self.assertRaises(LakeIngestError) as ctx:
                 product_adapter.read_iceberg_rows(CONTRACT, "crypto_prices")

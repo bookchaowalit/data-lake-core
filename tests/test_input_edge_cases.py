@@ -67,11 +67,15 @@ class CsvProjectionTests(unittest.TestCase):
 class GetRecordTests(unittest.TestCase):
     def test_already_decoded_id_with_percent(self) -> None:
         payload = {"items": [{"record_id": "100%41"}, {"record_id": "100A"}]}
-        self.assertEqual(get_record_from_payload("100%41", payload), {"record_id": "100%41"})
+        self.assertEqual(
+            get_record_from_payload("100%41", payload), {"record_id": "100%41"}
+        )
 
     def test_encoded_id_still_resolves(self) -> None:
         payload = {"items": [{"record_id": "a:b"}]}
-        self.assertEqual(get_record_from_payload("a%3Ab", payload), {"record_id": "a:b"})
+        self.assertEqual(
+            get_record_from_payload("a%3Ab", payload), {"record_id": "a:b"}
+        )
 
 
 if __name__ == "__main__":

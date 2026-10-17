@@ -170,7 +170,9 @@ def _pyarrow():
 
 
 def _canonical_json(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+    return json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str
+    )
 
 
 def _text(value: Any) -> str:
@@ -236,11 +238,12 @@ def _common_silver_fields(
     payload: dict[str, Any],
 ) -> dict[str, Any]:
     return {
-        "record_id": _text(row.get("source_record_id")) or "hash:" + hashlib.sha256(
-            _canonical_json(payload).encode("utf-8")
-        ).hexdigest()[:20],
+        "record_id": _text(row.get("source_record_id"))
+        or "hash:"
+        + hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()[:20],
         "source": _text(row.get("source")),
-        "source_record_id": _text(row.get("source_record_id")) or _text(payload.get("id")),
+        "source_record_id": _text(row.get("source_record_id"))
+        or _text(payload.get("id")),
         "domain": _text(row.get("domain")),
         "dataset": _text(row.get("dataset")),
         "silver_schema_version": SILVER_SCHEMA_VERSION,
@@ -317,9 +320,9 @@ def normalize_crypto_row(
     errors.extend(_numeric_errors(price, "price"))
     output = {
         **_common_silver_fields(row, silver_run_id=silver_run_id, payload=payload),
-        "record_id": source_record_id or "hash:" + hashlib.sha256(
-            _canonical_json(payload).encode("utf-8")
-        ).hexdigest()[:20],
+        "record_id": source_record_id
+        or "hash:"
+        + hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()[:20],
         "source_record_id": source_record_id,
         "coin_id": coin_id,
         "currency": currency.lower(),
@@ -355,9 +358,9 @@ def normalize_stock_row(
         errors.append("missing currency")
     output = {
         **_common_silver_fields(row, silver_run_id=silver_run_id, payload=payload),
-        "record_id": source_record_id or "hash:" + hashlib.sha256(
-            _canonical_json(payload).encode("utf-8")
-        ).hexdigest()[:20],
+        "record_id": source_record_id
+        or "hash:"
+        + hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()[:20],
         "source_record_id": source_record_id,
         "symbol": symbol,
         "price": price,
@@ -394,9 +397,9 @@ def normalize_fx_row(
     errors.extend(_numeric_errors(rate, "rate", positive=True))
     output = {
         **_common_silver_fields(row, silver_run_id=silver_run_id, payload=payload),
-        "record_id": source_record_id or "hash:" + hashlib.sha256(
-            _canonical_json(payload).encode("utf-8")
-        ).hexdigest()[:20],
+        "record_id": source_record_id
+        or "hash:"
+        + hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()[:20],
         "source_record_id": source_record_id,
         "base_currency": base_currency,
         "quote_currency": quote_currency,
@@ -434,10 +437,23 @@ def normalize_crypto_ohlcv_row(
     """Map one closed-bar Bronze envelope into the OHLCV Silver schema."""
     payload = parse_payload_json(row)
     source_record_id = _text(row.get("source_record_id")) or _text(payload.get("id"))
-    fields = {key: _raw_text(payload.get(key)) for key in (
-        "venue", "symbol", "interval", "open_time_ms", "close_time_ms",
-        "open", "high", "low", "close", "volume", "quote_volume", "trades",
-    )}
+    fields = {
+        key: _raw_text(payload.get(key))
+        for key in (
+            "venue",
+            "symbol",
+            "interval",
+            "open_time_ms",
+            "close_time_ms",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "quote_volume",
+            "trades",
+        )
+    }
     errors: list[str] = []
     if not source_record_id:
         errors.append("missing source_record_id")
@@ -477,9 +493,16 @@ def normalize_crypto_funding_row(
     """Map one funding-rate Bronze envelope into the funding Silver schema."""
     payload = parse_payload_json(row)
     source_record_id = _text(row.get("source_record_id")) or _text(payload.get("id"))
-    fields = {key: _raw_text(payload.get(key)) for key in (
-        "venue", "symbol", "funding_time_ms", "funding_rate", "mark_price",
-    )}
+    fields = {
+        key: _raw_text(payload.get(key))
+        for key in (
+            "venue",
+            "symbol",
+            "funding_time_ms",
+            "funding_rate",
+            "mark_price",
+        )
+    }
     errors: list[str] = []
     if not source_record_id:
         errors.append("missing source_record_id")
@@ -611,14 +634,18 @@ def transform_bronze_to_silver(
         for row in latest_rows
     ]
     fingerprint = hashlib.sha256(
-        _canonical_json({"transform": contract.transform_version, "rows": fingerprint_input}).encode("utf-8")
+        _canonical_json(
+            {"transform": contract.transform_version, "rows": fingerprint_input}
+        ).encode("utf-8")
     ).hexdigest()
     silver_run_id = f"silver-{fingerprint[:24]}"
     normalized: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     for row in latest_rows:
         if contract.normalizer in NORMALIZERS:
-            item, row_errors = NORMALIZERS[contract.normalizer][0](row, silver_run_id=silver_run_id)
+            item, row_errors = NORMALIZERS[contract.normalizer][0](
+                row, silver_run_id=silver_run_id
+            )
         elif contract.normalizer == "crypto_prices":
             item, row_errors = normalize_crypto_row(row, silver_run_id=silver_run_id)
         elif contract.normalizer == "job_postings":
@@ -631,11 +658,19 @@ def transform_bronze_to_silver(
             raise ValueError(f"unsupported Silver normalizer: {contract.normalizer}")
         normalized.append(item)
         if row_errors:
-            errors.append({
-                "source_record_id": _text(row.get("source_record_id")),
-                "errors": row_errors,
-            })
-    normalized.sort(key=lambda item: (item["record_id"], item["event_time"], item["source_record_id"]))
+            errors.append(
+                {
+                    "source_record_id": _text(row.get("source_record_id")),
+                    "errors": row_errors,
+                }
+            )
+    normalized.sort(
+        key=lambda item: (
+            item["record_id"],
+            item["event_time"],
+            item["source_record_id"],
+        )
+    )
     if errors:
         raise SilverQualityError(
             "Silver quality gate failed: " + _canonical_json({"invalid_rows": errors})
@@ -658,8 +693,20 @@ def transform_bronze_to_silver(
         parquet_bytes,
         content_type="application/vnd.apache.parquet",
     )
-    raw_keys = sorted({_text(row.get("raw_object_key")) for row in latest_rows if _text(row.get("raw_object_key"))})
-    ingest_runs = sorted({_text(row.get("ingest_run_id")) for row in latest_rows if _text(row.get("ingest_run_id"))})
+    raw_keys = sorted(
+        {
+            _text(row.get("raw_object_key"))
+            for row in latest_rows
+            if _text(row.get("raw_object_key"))
+        }
+    )
+    ingest_runs = sorted(
+        {
+            _text(row.get("ingest_run_id"))
+            for row in latest_rows
+            if _text(row.get("ingest_run_id"))
+        }
+    )
     manifest = {
         "manifest_version": "1",
         "layer": "silver",
@@ -725,7 +772,9 @@ def transform_bronze_to_silver(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data-lake-uri", default=os.environ.get("SOLO_EMPIRE_DATA_LAKE_URI", ""))
+    parser.add_argument(
+        "--data-lake-uri", default=os.environ.get("SOLO_EMPIRE_DATA_LAKE_URI", "")
+    )
     parser.add_argument("--source", default="book-job-data")
     parser.add_argument("--domain", default="jobs")
     parser.add_argument("--bronze-dataset", default="job_postings")
@@ -735,7 +784,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--transform-version", default=JOB_TRANSFORM_VERSION)
     parser.add_argument(
         "--normalizer",
-        choices=("job_postings", "crypto_prices", "stock_prices", "fx_rates", *NORMALIZERS),
+        choices=(
+            "job_postings",
+            "crypto_prices",
+            "stock_prices",
+            "fx_rates",
+            *NORMALIZERS,
+        ),
         default="job_postings",
     )
     parser.add_argument("--privacy-class", default="internal")
@@ -764,7 +819,16 @@ def main() -> int:
             if args.normalizer == "stock_prices"
             else ("source_record_id", "base_currency", "quote_currency", "rate")
             if args.normalizer == "fx_rates"
-            else ("source_record_id", "symbol", "interval", "open_time_ms", "open", "high", "low", "close")
+            else (
+                "source_record_id",
+                "symbol",
+                "interval",
+                "open_time_ms",
+                "open",
+                "high",
+                "low",
+                "close",
+            )
             if args.normalizer == "crypto_ohlcv"
             else ("source_record_id", "symbol", "funding_time_ms", "funding_rate")
             if args.normalizer == "crypto_funding"
