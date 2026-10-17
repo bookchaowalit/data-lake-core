@@ -51,7 +51,15 @@ class RuntimeTests(unittest.TestCase):
             raw = b'{"id":"job-1","title":"Data Engineer"}'
             result = ingest_payload(
                 raw,
-                [{"id": "job-1", "title": "Data Engineer", "event_time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}],
+                [
+                    {
+                        "id": "job-1",
+                        "title": "Data Engineer",
+                        "event_time": datetime.now(timezone.utc).strftime(
+                            "%Y-%m-%dT%H:%M:%SZ"
+                        ),
+                    }
+                ],
                 source="book-job-data",
                 domain="jobs",
                 dataset="job_postings",
@@ -103,10 +111,12 @@ class RuntimeTests(unittest.TestCase):
             return_value=(fake_query, RuntimeError),
         ):
             read_bronze_rows(
-                contract, "job_postings", data_lake_uri="s3://bucket/prefix", require_committed=False
+                contract,
+                "job_postings",
+                data_lake_uri="s3://bucket/prefix",
+                require_committed=False,
             )
         self.assertIn("ingest_date=*/source=*/part-*.parquet", str(captured["paths"]))
-
 
     @unittest.skipUnless(os.name == "nt", "Windows drive paths only")
     def test_windows_drive_paths_resolve_to_absolute_root(self):
@@ -116,6 +126,7 @@ class RuntimeTests(unittest.TestCase):
                 store = ObjectStore(uri)
                 self.assertEqual(store.scheme, "file")
                 self.assertEqual(store.root, root)
+
 
 if __name__ == "__main__":
     unittest.main()

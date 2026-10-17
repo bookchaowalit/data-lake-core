@@ -38,7 +38,12 @@ TIMESTAMP_KEYS = (
 
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def parse_ts(value: str) -> Optional[datetime]:
@@ -65,7 +70,9 @@ def parse_ts(value: str) -> Optional[datetime]:
         return None
 
 
-def make_record_id(row: dict[str, Any], *, id_fields: Sequence[str], id_sep: str = ":") -> str:
+def make_record_id(
+    row: dict[str, Any], *, id_fields: Sequence[str], id_sep: str = ":"
+) -> str:
     parts = []
     for field in id_fields:
         raw = str(row.get(field, "")).strip()
@@ -148,6 +155,7 @@ def silver_parity_report(
     compare_fields: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Compare consumer-visible values while ignoring physical lineage fields."""
+
     def key(item: dict[str, Any]) -> str:
         return "|".join(stringify(item.get(field)) for field in key_fields)
 
@@ -294,7 +302,11 @@ def load_layered_dataset(
     compare_fields: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Read Bronze by default, or run the guarded Bronze/Silver parity pilot."""
-    mode = (silver_read_mode or os.environ.get("SILVER_READ_MODE", "bronze")).strip().lower()
+    mode = (
+        (silver_read_mode or os.environ.get("SILVER_READ_MODE", "bronze"))
+        .strip()
+        .lower()
+    )
     if mode not in {"bronze", "compare", "silver"}:
         return {
             "items": [],
@@ -303,14 +315,16 @@ def load_layered_dataset(
             "path": silver_dataset_path(
                 contract,
                 dataset,
-                data_lake_uri=data_lake_uri or default_data_lake_uri(
+                data_lake_uri=data_lake_uri
+                or default_data_lake_uri(
                     data_lake_uri=contract.data_lake_uri,
                     project_root=contract.project_root,
                 ),
             ),
             "source_kind": "silver_parquet" if mode == "silver" else "bronze_parquet",
             "read_mode": read_mode or os.environ.get("LAKE_READ_MODE", "parquet"),
-            "read_fallback": read_fallback or os.environ.get("LAKE_READ_FALLBACK", "error"),
+            "read_fallback": read_fallback
+            or os.environ.get("LAKE_READ_FALLBACK", "error"),
             "fallback_reason": None,
             "silver_read_mode": mode,
             "silver_parity": None,
@@ -334,15 +348,17 @@ def load_layered_dataset(
         return bronze
 
     if not latest_only:
-        bronze.update({
-            "silver_read_mode": mode,
-            "silver_parity": {
-                "status": "not_applicable",
-                "reason": "current Silver contracts are snapshots; history remains Bronze",
-                "bronze_count": len(bronze["items"]),
-                "silver_count": 0,
-            },
-        })
+        bronze.update(
+            {
+                "silver_read_mode": mode,
+                "silver_parity": {
+                    "status": "not_applicable",
+                    "reason": "current Silver contracts are snapshots; history remains Bronze",
+                    "bronze_count": len(bronze["items"]),
+                    "silver_count": 0,
+                },
+            }
+        )
         return bronze
 
     if bronze["data_status"] in {"error", "malformed"}:
@@ -370,12 +386,14 @@ def load_layered_dataset(
         if mode == "compare":
             bronze.update({"silver_read_mode": mode, "silver_parity": parity})
             return bronze
-        silver.update({
-            "data_status": "error",
-            "error": f"Silver serving is unavailable: {silver['error']}",
-            "silver_read_mode": mode,
-            "silver_parity": parity,
-        })
+        silver.update(
+            {
+                "data_status": "error",
+                "error": f"Silver serving is unavailable: {silver['error']}",
+                "silver_read_mode": mode,
+                "silver_parity": parity,
+            }
+        )
         return silver
 
     parity = silver_parity_report(
@@ -388,13 +406,15 @@ def load_layered_dataset(
         bronze.update({"silver_read_mode": mode, "silver_parity": parity})
         return bronze
     if parity["status"] != "passed":
-        silver.update({
-            "data_status": "malformed",
-            "error": "Silver serving is fail-closed until parity passes: "
-            + json.dumps(parity, ensure_ascii=False, sort_keys=True),
-            "silver_read_mode": mode,
-            "silver_parity": parity,
-        })
+        silver.update(
+            {
+                "data_status": "malformed",
+                "error": "Silver serving is fail-closed until parity passes: "
+                + json.dumps(parity, ensure_ascii=False, sort_keys=True),
+                "silver_read_mode": mode,
+                "silver_parity": parity,
+            }
+        )
         return silver
     silver.update({"silver_read_mode": mode, "silver_parity": parity})
     return silver
@@ -429,7 +449,10 @@ def default_item_from_bronze(
             item[key] = stringify(payload.get(key, ""))
     if history:
         item.setdefault("date", event_time)
-        item["record_id"] = make_record_id(item, id_fields=id_fields, id_sep=id_sep) + f"#h{history_idx}"
+        item["record_id"] = (
+            make_record_id(item, id_fields=id_fields, id_sep=id_sep)
+            + f"#h{history_idx}"
+        )
     else:
         item["record_id"] = make_record_id(item, id_fields=id_fields, id_sep=id_sep)
     return item
@@ -461,8 +484,8 @@ def load_bronze_dataset(
         )
     mode = (read_mode or os.environ.get("LAKE_READ_MODE", "parquet")).strip().lower()
     fallback = (
-        read_fallback or os.environ.get("LAKE_READ_FALLBACK", "error")
-    ).strip().lower()
+        (read_fallback or os.environ.get("LAKE_READ_FALLBACK", "error")).strip().lower()
+    )
     if mode not in {"parquet", "iceberg"}:
         source_kind = (
             "bronze_s3_parquet" if is_remote_lake_uri(uri) else "bronze_parquet"
