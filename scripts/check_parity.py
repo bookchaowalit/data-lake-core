@@ -213,7 +213,8 @@ def _strip_docstrings(tree: ast.AST) -> ast.AST:
 
 def _normalize(source: str) -> tuple[dict[str, str], list[str]]:
     """Return ({top-level def name: dump}, [other statement dumps])."""
-    tree = _strip_docstrings(ast.parse(source))
+    tree = ast.parse(source)
+    _strip_docstrings(tree)  # strips in place
     defs: dict[str, str] = {}
     other: list[str] = []
     for node in tree.body:

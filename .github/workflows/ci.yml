@@ -1,5 +1,4 @@
 # CI + security baseline (DevSecOps Phase 1). Public repository: GitHub-hosted runners.
-# Replaces the previous ci.yml (Python 3.11 + 3.12 matrix: Ruff, unittest contract tests, compileall).
 name: CI
 
 on:
@@ -16,21 +15,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Both supported versions, as the old matrix did (requires-python >=3.11).
-  lake-py311:
-    uses: bookchaowalit/platform-ci-workflows/.github/workflows/ci-python.yml@c37ef9d113eefb3ed45429717cb7ca201192c3fc # v1.0.1
+  lake:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Lowest supported (requires-python >=3.11) and a current release; consumers run 3.12.
+        python-version: ["3.11", "3.13"]
+    uses: bookchaowalit/platform-ci-workflows/.github/workflows/ci-python.yml@87dc5e1c7e0416886a6371d5a101bb2ccba38edd # v1.1.1
     with:
-      python-version: "3.11"
-      # The tests need pyarrow + duckdb (the "lake" extra); there is no dev extra.
-      install-command: uv pip install -e ".[lake]"
-      test-command: python -m unittest discover -s tests -v && python -m compileall -q src
-
-  lake-py312:
-    uses: bookchaowalit/platform-ci-workflows/.github/workflows/ci-python.yml@c37ef9d113eefb3ed45429717cb7ca201192c3fc # v1.0.1
-    with:
-      python-version: "3.12"
-      install-command: uv pip install -e ".[lake]"
-      test-command: python -m unittest discover -s tests -v && python -m compileall -q src
+      python-version: ${{ matrix.python-version }}
+      # Installs from uv.lock (uv sync --frozen --all-extras): lake + iceberg engines, the opt-in
+      # sentry extra, and the dev extra (pytest, pytest-cov, ruff, mypy).
+      # Ratchet: measured 51.54% on 2026-10-22 on 3.11 and 3.13 (ADR-0004: threshold = measured,
+      # rounded down); raise it as tests grow. The 80% floor is an open follow-up.
+      coverage-threshold: "51"
+      # Offline unittest suite (run by pytest) under coverage, then the byte-compile check the
+      # previous workflow ran. The live parent parity test skips without SOLO_DATA_LAKE_ROOT.
+      test-command: |
+        python -m pytest -q --cov
+        python -m compileall -q src
 
   security:
-    uses: bookchaowalit/platform-ci-workflows/.github/workflows/security.yml@c37ef9d113eefb3ed45429717cb7ca201192c3fc # v1.0.1
+    uses: bookchaowalit/platform-ci-workflows/.github/workflows/security.yml@87dc5e1c7e0416886a6371d5a101bb2ccba38edd # v1.1.1

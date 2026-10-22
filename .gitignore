@@ -5,3 +5,7 @@ __pycache__/
 .pytest_cache/
 dist/
 build/
+.coverage
+.coverage.*
+.mypy_cache/
+.ruff_cache/

@@ -346,7 +346,7 @@ def write_lineage(
     datasets = (
         previous.get("datasets") if isinstance(previous.get("datasets"), dict) else {}
     )
-    datasets[dataset] = {
+    datasets[dataset] = {  # type: ignore[index]  # a dict after the isinstance check above
         "run_id": result.get("run_id"),
         "record_count": result.get("record_count"),
         "raw_key": result.get("raw_key"),
@@ -405,7 +405,7 @@ def read_bronze_rows(
             if not paths:
                 return []
         else:
-            paths = remote_bronze_dataset_glob(contract, dataset, data_lake_uri=uri)
+            paths = remote_bronze_dataset_glob(contract, dataset, data_lake_uri=uri)  # type: ignore[assignment]  # query_parquet takes a glob or a list
     else:
         files = list_bronze_parquet_files(contract, dataset, data_lake_uri=uri)
         if committed_keys is not None:

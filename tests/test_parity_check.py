@@ -18,8 +18,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "check_parity.py"
 
 _spec = importlib.util.spec_from_file_location("check_parity", SCRIPT)
+assert _spec is not None and _spec.loader is not None
 check_parity = importlib.util.module_from_spec(_spec)
-assert _spec.loader is not None
 _spec.loader.exec_module(check_parity)
 
 PACKAGED = '''"""Packaged docstring."""

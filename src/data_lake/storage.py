@@ -127,7 +127,7 @@ class ObjectStore:
         elif scheme == "s3":
             if not parsed.netloc:
                 raise StorageError("An s3:// URI must include a bucket")
-            self.root = None
+            self.root = None  # type: ignore[assignment]  # s3:// stores have no local root
             self.bucket = parsed.netloc
             self.prefix = parsed.path.strip("/")
         else:

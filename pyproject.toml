@@ -17,6 +17,16 @@ iceberg = [
   "duckdb>=1.1.0,<2.0.0",
   "pyiceberg[sql-sqlite,s3fs]>=0.8.0",
 ]
+# Opt-in only. This package is a library: nothing here runs as a scheduled job (consumers import
+# product_adapter/product_store/silver/storage). The job that imports it owns Sentry init; this
+# extra only lets a consumer install a compatible SDK alongside the lake runtime.
+sentry = ["sentry-sdk>=2.72,<3"]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=7",
+  "ruff==0.16.9",
+  "mypy==2.4.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -25,5 +35,32 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src"]
+
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src", "scripts", "tests"]
+# Gradual: the runtime predates full annotations, so bodies are checked (check_untyped_defs)
+# without requiring annotations everywhere. src/data_lake mirrors data-lake-pipelines
+# (scripts/check_parity.py compares ASTs), so fixes there must be ported to the parent too.
+check_untyped_defs = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+
+# src/data_lake is mirrored from data-lake-pipelines, whose copies keep "# type: ignore" on
+# optional-engine and bootstrap imports (they type-check without the engines installed).
+# Keep those comments so ports stay line-for-line; do not flag them as unused here.
+[[tool.mypy.overrides]]
+module = ["data_lake.*"]
+warn_unused_ignores = false
