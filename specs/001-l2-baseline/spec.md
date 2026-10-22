@@ -61,7 +61,7 @@ product repos) pinned a commit that was never checked for types or coverage.
 | AC | Red (sha · command · failure) | Green |
 |---|---|---|
 | AC-06 | not fixed here: `python -m pytest -q tests/test_lake_contract.py` → `AttributeError: 'list' object has no attribute 'get'` (`product_adapter.write_lineage`), kept as `expectedFailure` | fix belongs to data-lake-pipelines first (README update procedure), then port |
-| AC-01..05, 07, 09 | none (characterisation of existing behaviour; no production change) | `GREEN_CI` |
+| AC-01..05, 07, 09 | none (characterisation of existing behaviour; no production change) | https://github.com/bookchaowalit/data-lake-core/actions/runs/39712959999 (`e5dbb14`, success on 3.11 and 3.13 + security) |
 
 ## Consumer check
 
