@@ -46,11 +46,19 @@ default Bronze API path.
 
 ## Verification
 
+Dependencies are locked in `uv.lock` (uv 0.13+); CI runs the same commands on
+Python 3.11 and 3.13:
+
 ```bash
-ruff check src tests scripts
-python -m unittest discover -s tests -v
-python -m compileall -q src
+uv sync --frozen --all-extras          # lake + iceberg engines, sentry extra, dev tools
+uv run ruff check . && uv run ruff format --check .
+uv run mypy                            # scope and strictness in [tool.mypy]
+uv run python -m pytest -q --cov       # offline; CI gate: coverage >= 51%
+uv run python -m compileall -q src
 ```
+
+Sentry is an opt-in extra (`solo-empire-data-lake[sentry]`) for consumers; the
+library itself never initialises it.
 
 `tests/test_standalone_parity.py` pins the module surface that the
 `book-*-data` product repositories import (`product_adapter`,
