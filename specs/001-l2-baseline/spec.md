@@ -85,3 +85,10 @@ Planned replacement once D6 is decided: none in this repo; each consumer's hoste
 
 Changing `src/data_lake` behaviour (parent-first procedure), release tags, bumping consumer pins
 other than market-data, Iceberg catalog labs, R2 writes.
+
+## Review (2026-10-24): changes requested
+
+Checker: independent Claude reviewer subagent (`solo:solo-reviewer`, Sonnet, read-only, no maker context). Status unchanged until fixed.
+
+- Tests run by the checker: uv run --frozen --offline pytest -q --cov: 46 passed, 1 skipped, 1 xfailed, 1 failed (LiveParentParityTests needs parent checkout); coverage 52% (gate 51)
+- Gap: AC-06 (lineage file holding a JSON list is replaced) is not implemented: the test is @unittest.expectedFailure and write_lineage still raises AttributeError. AC-07 (AST parity) and AC-08 (consumer suite) are local-only and not reproducible here. Move AC-06 to known issues or port the parent fix.
